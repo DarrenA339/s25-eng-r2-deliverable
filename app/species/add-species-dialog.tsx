@@ -74,11 +74,23 @@ const defaultValues: Partial<FormData> = {
   description: null,
 };
 
+// no type error for wiki API
+type WikipediaResponse = {
+  title?: string;
+  extract?: string;
+  thumbnail?: {
+    source: string;
+  };
+};
+
 export default function AddSpeciesDialog({ userId }: { userId: string }) {
   const router = useRouter();
 
   // Control open/closed state of the dialog
   const [open, setOpen] = useState<boolean>(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Instantiate form functionality with React Hook Form, passing in the Zod schema (for validation) and default values
   const form = useForm<FormData>({
@@ -86,6 +98,42 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
     defaultValues,
     mode: "onChange",
   });
+
+  const fetchWikipediaData = async () => {
+    if (!searchQuery.trim()) {
+      return toast({ title: "Error", description: "Please enter a species name.", variant: "destructive" });
+    }
+
+    // disables search button while fetching data
+    setLoading(true);
+
+    try {
+      // fetch will grab the data in the API and wait for it
+      const response = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(searchQuery)}`,
+      );
+      const data = (await response.json()) as WikipediaResponse;
+
+      if (data?.extract) {
+        // update name, description, and image
+        form.setValue("common_name", data.title ?? searchQuery);
+        form.setValue("description", data.extract ?? "No description available.");
+        form.setValue("image", data.thumbnail?.source ?? "");
+
+        toast({ title: "Success", description: "Autofilled species details from Wikipedia." });
+      } else {
+        toast({
+          title: "Not Found",
+          description: "No Wikipedia article found for this species.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to fetch data from Wikipedia.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSubmit = async (input: FormData) => {
     // The `input` prop contains data that has already been processed by zod. We can now use it in a supabase query
@@ -144,6 +192,18 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
             Add a new species here. Click &quot;Add Species&quot; below when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex space-x-2">
+          <Input
+            placeholder="Search Wikipedia for species info..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button onClick={fetchWikipediaData} disabled={loading}>
+            {loading ? "Searching..." : "Search"}
+          </Button>
+        </div>
+
         <Form {...form}>
           <form onSubmit={(e: BaseSyntheticEvent) => void form.handleSubmit(onSubmit)(e)}>
             <div className="grid w-full items-center gap-4">

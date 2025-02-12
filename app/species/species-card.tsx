@@ -172,7 +172,6 @@ export default function SpeciesCard({ species, sessionId }: { species: Species; 
                   </SelectGroup>
                 </SelectContent>
               </Select>
-
               <Input
                 type="number"
                 {...form.register("total_population", {
