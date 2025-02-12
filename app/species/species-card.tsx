@@ -56,6 +56,8 @@ const speciesSchema = z.object({
     .transform((val) => (!val || val.trim() === "" ? null : val.trim())),
 });
 
+type FormData = z.infer<typeof speciesSchema>;
+
 export default function SpeciesCard({ species, sessionId }: { species: Species; sessionId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -75,7 +77,7 @@ export default function SpeciesCard({ species, sessionId }: { species: Species; 
     mode: "onChange",
   });
 
-  const onSubmit = async (input: any) => {
+  const onSubmit = async (input: FormData) => {
     const { error } = await supabase
       .from("species")
       .update({
@@ -133,7 +135,7 @@ export default function SpeciesCard({ species, sessionId }: { species: Species; 
               {isEditing ? "Edit Species" : `${species.common_name} (${species.scientific_name})`}
             </DialogTitle>
             <DialogDescription>
-              {isEditing ? "Update species details below." : species.description || "No description available."}
+              {isEditing ? "Update species details below." : species.description ?? "No description available."}
             </DialogDescription>
           </DialogHeader>
 
@@ -151,7 +153,13 @@ export default function SpeciesCard({ species, sessionId }: { species: Species; 
 
           {/* Editable Form (Only if the user is editing) */}
           {isEditing ? (
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void form.handleSubmit(onSubmit)();
+              }}
+              className="space-y-3"
+            >
               <Input {...form.register("scientific_name")} placeholder="Scientific Name" />
               <Input {...form.register("common_name")} placeholder="Common Name (Optional)" />
 
@@ -189,7 +197,7 @@ export default function SpeciesCard({ species, sessionId }: { species: Species; 
                 <strong>Kingdom:</strong> {species.kingdom}
               </p>
               <p>
-                <strong>Total Population:</strong> {species.total_population?.toLocaleString() || "Unknown"}
+                <strong>Total Population:</strong> {species.total_population?.toLocaleString() ?? "Unknown"}
               </p>
             </div>
           )}

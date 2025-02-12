@@ -75,13 +75,13 @@ const defaultValues: Partial<FormData> = {
 };
 
 // no type error for wiki API
-type WikipediaResponse = {
+interface WikipediaResponse {
   title?: string;
   extract?: string;
   thumbnail?: {
     source: string;
   };
-};
+}
 
 export default function AddSpeciesDialog({ userId }: { userId: string }) {
   const router = useRouter();
@@ -199,7 +199,14 @@ export default function AddSpeciesDialog({ userId }: { userId: string }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <Button onClick={fetchWikipediaData} disabled={loading}>
+          <Button
+            onClick={() => {
+              fetchWikipediaData().catch((error) => {
+                console.error("Error fetching data:", error);
+              });
+            }}
+            disabled={loading}
+          >
             {loading ? "Searching..." : "Search"}
           </Button>
         </div>
